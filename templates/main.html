@@ -3,76 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PitchProfile</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 20px;
-        }
-        .container {
-            width: 60%;
-            margin: auto;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        .logo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .logo img {
-            width: 50px;
-            margin-right: 10px;
-        }
-        h1 {
-            color: navy;
-        }
-        input {
-            width: 80%;
-            padding: 8px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        button {
-            padding: 10px 15px;
-            border: none;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .create-profile {
-            background-color: blue;
-        }
-        .generate-email {
-            background-color: dodgerblue;
-        }
-        textarea {
-            width: 80%;
-            height: 100px;
-            margin-top: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-    </style>
+    <title>Whitehat | Email Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='main.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <div class="logo">
-            <img src="email-icon.png" alt="Email Icon">
-            <h1>PitchProfile</h1>
+            <svg style="padding-right: 10px; width: 50px; height: auto;"xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fff" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2m-.4 4.25l-7.07 4.42c-.32.2-.74.2-1.06 0L4.4 8.25a.85.85 0 1 1 .9-1.44L12 11l6.7-4.19a.85.85 0 1 1 .9 1.44"/></svg>
+            <h1>Whitehat</h1>
         </div>
-        <p>Enter URLs to scan for information</p>
-        <input type="text" placeholder="Enter URL...">
-        <input type="text" placeholder="Enter URL...">
-        <br>
-        <button class="create-profile">Create Profile</button>
-        <button class="generate-email">Generate Email</button>
-        <br>
-        <textarea placeholder="Generated email will appear here..."></textarea>
+        <p>Enter URLs to analyze and create your perfect pitch</p>
+        
+        <div class="form-group">
+            <input type="text" id="url1" placeholder=" " spellcheck="false">
+            <label for="url1">First URL to analyze</label>
+        </div>
+
+        
+        <div class="form-group">
+            <input type="text" id="product" placeholder=" " spellcheck="false">
+            <label for="product">Your product</label>
+        </div>
+        
+        <div class="button-group">
+            <button class="create-profile" onclick="scanUrls()">Create Emails</button>
+            <button class="generate-email">Send Email</button>
+        </div>
+        
+        <div class="email-selector" style="display: none;">
+            <button class="email-tab active" onclick="showEmail(0)">
+                Email Version 1
+            </button>
+            <button class="email-tab" onclick="showEmail(1)">
+                Email Version 2
+            </button>
+            <button class="email-tab" onclick="showEmail(2)">
+                Email Version 3
+            </button>
+        </div>
+        
+        <div class="email-container" style="display: none;">
+            <div class="email-form">
+                <div class="email-header">
+                    <input type="text" id="email-subject" placeholder="Email Subject" readonly>
+                </div>
+                <div class="email-body">
+                    <textarea id="email-content" placeholder="Email content will appear here..." readonly></textarea>
+                </div>
+                <div class="email-actions">
+                    <button class="generate-email" onclick="copyToClipboard()">
+                        Copy to Clipboard
+                    </button>
+                    <button class="create-profile" onclick="sendEmail()">
+                        Send Email
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading-spinner" style="display: none;">
+            Processing your request...
+        </div>
     </div>
+
+    <script>
+        let currentEmails = [];
+        let currentEmailIndex = 0;
+
+        function showEmailInterface(show) {
+            document.querySelector('.email-selector').style.display = show ? 'flex' : 'none';
+            document.querySelector('.email-container').style.display = show ? 'block' : 'none';
+        }
+
+        function showEmail(index) {
+            if (!currentEmails || !currentEmails[index]) return;
+            
+            currentEmailIndex = index;
+            const emailSubject = document.getElementById('email-subject');
+            const emailContent = document.getElementById('email-content');
+
+            document.querySelectorAll('.email-tab').forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            
+            emailSubject.value = currentEmails[index].subject;
+            emailContent.value = currentEmails[index].body;
+        }
+
+        async function scanUrls() {
+            const url1 = document.getElementById('url1').value;
+            const product = document.getElementById('product').value;
+            const loading = document.getElementById('loading');
+            const button = document.querySelector('.create-profile');
+            
+            if (!product) {
+                alert('Please enter a product');
+                return;
+            }
+            
+            button.textContent = 'Processing...';
+            button.disabled = true;
+            loading.style.display = 'block';
+            showEmailInterface(false);
+            
+            try {
+                const response1 = await fetch('/scan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        link: url1,
+                        product: product
+                    })
+                });
+                const data1 = await response1.json();
+                
+                if (!data1.status) {
+                    alert('Error processing URLs: ' + data1.content);
+                    return;
+                }
+                
+                currentEmails = data1.content;
+                showEmailInterface(true);
+                showEmail(0);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                button.textContent = 'Create Profile';
+                button.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        async function copyToClipboard() {
+            const content = document.getElementById('email-content').value;
+            const subject = document.getElementById('email-subject').value;
+            
+            try {
+                await navigator.clipboard.writeText(`Subject: ${subject}\n\n${content}`);
+                alert('Copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+        }
+    </script>
+
+    <style>
+        .email-selector {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .email-tab {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .email-tab:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .email-tab.active {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+
+        .email-form {
+            border: 2px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: var(--bg-secondary);
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .email-header {
+            padding: 1rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #email-subject {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        #email-subject:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            background-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 4px rgba(77, 171, 247, 0.1);
+        }
+
+        .email-body {
+            padding: 1rem;
+        }
+
+        #email-content {
+            width: 100%;
+            min-height: 300px;
+            padding: 1rem;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        #email-content:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            background-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 4px rgba(77, 171, 247, 0.1);
+        }
+
+        .loading-spinner {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-secondary);
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </body>
 </html>
