@@ -4,13 +4,8 @@ from config.types import Types as t
 
 
 class Parser:
-    def __init__(self, filePath: str) -> None:
-        try:
-            with open(filePath, "r", encoding="utf-8") as htmlFile:
-                self.content = htmlFile.read()
-        except Exception as exc:
-            self.content = ""
-        self.soup = BeautifulSoup(self.content, "html.parser")
+    def __init__(self, content: str) -> None:
+        self.soup = BeautifulSoup(content, "html.parser")
 
     def _read(self, tag: Optional[str] = None, class_: Optional[str] = None) -> List:
         if tag is None and class_ is None:
