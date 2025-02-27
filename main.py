@@ -5,12 +5,13 @@ import requests
 from utils.parser import Parser
 from config.env import Env
 from utils.AI import ChatClient
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from colorama import init
+from utils.database import Database
 
 init(autoreset=True)
 logging.basicConfig(level=logging.INFO)
@@ -31,6 +32,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+db = Database()
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
@@ -59,7 +62,7 @@ async def scan_url(request: ScanRequest):
     personal_data = parser.getData()
     logger.info(f"Parsed data: {personal_data}")
     
-    aiClient = ChatClient()
+    aiClient = ChatClient(db=db)
     ai_response = aiClient.getCompletion(
         userMessage=str(personal_data), 
         product=request.product
@@ -87,4 +90,18 @@ async def scan_url(request: ScanRequest):
         "status": True,
         "content": emails
     }
+
+@app.get("/prompt")
+async def getPrompt():
+    prompt = db.getPrompt()
+    return JSONResponse(content=prompt)
+
+@app.put("/prompt")
+async def updatePrompt(newPrompt: dict):
+    db.updatePrompt(newPrompt)
+    return JSONResponse(content={"status": "success", "message": "Prompt updated successfully"})
+
+@app.get("/edit-prompt", response_class=HTMLResponse)
+async def editPrompt(request: Request):
+    return templates.TemplateResponse("prompt_editor.html", {"request": request})
 

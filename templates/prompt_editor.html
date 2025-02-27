@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit AI Pre-Prompt</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='prompt_editor.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>EDIT PRE-PROMPT</h1>
+        <label for="introText">Intro Text:</label>
+        <textarea id="introText" rows="5" cols="100"></textarea>
+        <br>
+        <label for="coreResponsibilities">Core Responsibilities:</label>
+        <textarea id="coreResponsibilities" rows="5" cols="100"></textarea>
+        <br>
+        <label for="tone">Tone:</label>
+        <textarea id="tone" rows="5" cols="100"></textarea>
+        <br>
+        <label for="requirements">Requirements:</label>
+        <textarea id="requirements" rows="5" cols="100"></textarea>
+        <br>
+        <label for="constraints">Constraints:</label>
+        <textarea id="constraints" rows="5" cols="100"></textarea>
+        <br>
+        <button onclick="savePrompt()">Save Prompt</button>
+        <div id="loading" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <span>Processing your request...</span>
+        </div>
+    </div>
+
+    <script>
+        async function loadPrompt() {
+            const response = await fetch('/prompt');
+            const data = await response.json();
+            document.getElementById('introText').value = data.introText;
+            document.getElementById('coreResponsibilities').value = data.coreResponsibilities;
+            document.getElementById('tone').value = data.tone;
+            document.getElementById('requirements').value = data.requirements;
+            document.getElementById('constraints').value = data.constraints;
+        }
+
+        async function savePrompt() {
+            const newPrompt = {
+                introText: document.getElementById('introText').value,
+                coreResponsibilities: document.getElementById('coreResponsibilities').value,
+                tone: document.getElementById('tone').value,
+                requirements: document.getElementById('requirements').value,
+                constraints: document.getElementById('constraints').value
+            };
+            const response = await fetch('/prompt', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newPrompt)
+            });
+            const data = await response.json();
+            alert(data.message);
+        }
+
+        window.onload = loadPrompt;
+    </script>
+</body>
+</html> 
